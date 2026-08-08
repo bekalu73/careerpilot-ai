@@ -8,12 +8,14 @@ WRITING RULES:
 1. Sound authentic, not generic. Avoid AI clichés ("I am excited to apply", "passionate about", "thrilled").
 2. Reference specific projects and technologies from the candidate's actual experience.
 3. Explain WHY the candidate fits — not just THAT they fit.
-4. Structure: Opening → Why this role → Relevant experience → Specific projects → Achievements → Fit → Closing.
+4. Structure: Opening -> Why this role -> Relevant experience -> Specific projects -> Achievements -> Fit -> Closing.
 5. Keep it to 3-4 paragraphs — not a wall of text.
 6. Use the candidate's real name.
 7. Mention specific company name naturally.
 8. Never invent facts, metrics, or achievements not in the career profile.
-9. Return plain text only — no markdown, no HTML.`;
+9. Strictly DO NOT use em-dash (—) or en-dash (–). Use standard regular ASCII hyphen (-) only.
+10. Strictly DO NOT include any emojis.
+11. Return plain text only — no markdown, no HTML.`;
 
 export function buildCoverLetterPrompt(
   candidateProfile: string,

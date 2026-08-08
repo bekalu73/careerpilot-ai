@@ -173,30 +173,63 @@ export type FactCheckerResult = z.infer<typeof FactCheckerResultSchema>;
 // ─── Resume Generator Schema ──────────────────────────────────────────────────
 
 export const ResumeGeneratorResultSchema = z.object({
+  name: z.string().optional(),
+  subtitle: z.string().optional(),
+  contactInfo: z
+    .object({
+      email: z.string().nullable().optional(),
+      phone: z.string().nullable().optional(),
+      location: z.string().nullable().optional(),
+      linkedinUrl: z.string().nullable().optional(),
+      githubUrl: z.string().nullable().optional(),
+      portfolioUrl: z.string().nullable().optional(),
+    })
+    .optional(),
   professionalSummary: z.string(),
-  orderedSkills: z.array(
-    z.object({
-      category: z.string(),
-      skills: z.array(z.string()),
-    })
-  ),
-  tailoredExperiences: z.array(
-    z.object({
-      experienceId: z.string(),
-      company: z.string(),
-      jobTitle: z.string(),
-      orderedBullets: z.array(z.string()),
-      emphasizedTechnologies: z.array(z.string()),
-    })
-  ),
-  tailoredProjects: z.array(
-    z.object({
-      projectId: z.string(),
-      name: z.string(),
-      description: z.string(),
-      orderedBullets: z.array(z.string()),
-    })
-  ),
+  orderedSkills: z
+    .array(
+      z.object({
+        category: z.string(),
+        skills: z.array(z.string()),
+      })
+    )
+    .default([]),
+  tailoredExperiences: z
+    .array(
+      z.object({
+        experienceId: z.string().optional(),
+        company: z.string(),
+        jobTitle: z.string(),
+        location: z.string().nullable().optional(),
+        dateRange: z.string().nullable().optional(),
+        orderedBullets: z.array(z.string()).default([]),
+        emphasizedTechnologies: z.array(z.string()).default([]),
+      })
+    )
+    .default([]),
+  tailoredProjects: z
+    .array(
+      z.object({
+        projectId: z.string().optional(),
+        name: z.string(),
+        description: z.string().nullable().optional(),
+        orderedBullets: z.array(z.string()).default([]),
+      })
+    )
+    .default([]),
+  educations: z
+    .array(
+      z.object({
+        institution: z.string(),
+        degree: z.string(),
+        field: z.string().nullable().optional(),
+        location: z.string().nullable().optional(),
+        dateRange: z.string().nullable().optional(),
+        bullets: z.array(z.string()).default([]),
+      })
+    )
+    .optional(),
+  certifications: z.array(z.string()).optional(),
 });
 
 export type ResumeGeneratorResult = z.infer<typeof ResumeGeneratorResultSchema>;

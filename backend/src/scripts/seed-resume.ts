@@ -16,7 +16,7 @@ async function main() {
   console.log("Experiences:", parsed.experiences.length);
   console.log("Projects:", parsed.projects.length);
   console.log("Skills:", parsed.skills.length);
-  console.log("Education:", parsed.education.length);
+  console.log("Education:", parsed.educations.length);
 
   // Clear existing and save
   await prisma.candidate.deleteMany();
@@ -34,7 +34,7 @@ async function main() {
       experiences: {
         create: parsed.experiences.map((exp) => ({
           company: exp.company,
-          role: exp.role,
+          jobTitle: exp.jobTitle,
           location: exp.location ?? null,
           startDate: exp.startDate ? new Date(exp.startDate) : new Date("2020-01-01"),
           endDate: exp.endDate ? new Date(exp.endDate) : null,
@@ -43,6 +43,7 @@ async function main() {
           responsibilities: exp.responsibilities ?? [],
           technologies: exp.technologies ?? [],
           achievements: exp.achievements ?? [],
+          domains: exp.domains ?? [],
         })),
       },
       projects: {
@@ -50,7 +51,6 @@ async function main() {
           name: proj.name,
           role: proj.role ?? null,
           description: proj.description ?? null,
-          url: proj.url ?? null,
           githubUrl: proj.githubUrl ?? null,
           demoUrl: proj.demoUrl ?? null,
           technologies: proj.technologies ?? [],
@@ -65,23 +65,18 @@ async function main() {
         create: parsed.skills.map((skill) => ({
           name: skill.name,
           category: skill.category ?? "TECHNICAL",
-          proficiency: (skill.proficiency as any) ?? "INTERMEDIATE",
-          yearsOfExperience: skill.yearsOfExperience ?? null,
-          lastUsed: skill.lastUsed ? new Date(skill.lastUsed) : null,
-          isVerified: true,
+          confirmed: true,
         })),
       },
       educations: {
-        create: parsed.education.map((edu) => ({
+        create: parsed.educations.map((edu) => ({
           institution: edu.institution,
-          degree: edu.degree,
-          fieldOfStudy: edu.fieldOfStudy ?? null,
-          location: edu.location ?? null,
+          degree: edu.degree ?? null,
+          field: edu.field ?? null,
           startDate: edu.startDate ? new Date(edu.startDate) : new Date("2018-01-01"),
           endDate: edu.endDate ? new Date(edu.endDate) : null,
-          isCurrent: edu.isCurrent ?? false,
           gpa: edu.gpa ?? null,
-          highlights: edu.highlights ?? [],
+          description: edu.description ?? null,
         })),
       },
       achievements: {

@@ -18,6 +18,7 @@ import {
 import { LinkedinIcon } from "@/components/icons";
 import { api, type GeneratedDocument } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import { ResumeDocument } from "@/components/resume-document";
 
 type DocTab = "resume" | "cover_letter" | "linkedin" | "telegram" | "whatsapp" | "email";
 
@@ -90,7 +91,7 @@ function FactCheckPanel({ doc, jobId, onRefresh }: {
     return (
       <div className="flex items-center gap-1.5 text-xs text-emerald-400">
         <CheckCircle className="h-3.5 w-3.5" />
-        Fact check passed — all claims verified
+        Fact check passed - all claims verified
       </div>
     );
   }
@@ -118,12 +119,12 @@ function FactCheckPanel({ doc, jobId, onRefresh }: {
             claim.severity === "HIGH" ? "text-red-400" :
             claim.severity === "MEDIUM" ? "text-amber-400" : "text-muted-foreground"
           )}>
-            ⚠ {claim.severity} — Unsupported claim
+            [{claim.severity}] - Unsupported claim
           </p>
           <p className="text-muted-foreground italic">"{claim.claim}"</p>
           <p className="text-muted-foreground">{claim.reason}</p>
           {claim.suggestion && (
-            <p className="text-foreground/70">💡 {claim.suggestion}</p>
+            <p className="text-foreground/70">Suggestion: {claim.suggestion}</p>
           )}
         </div>
       ))}
@@ -144,6 +145,11 @@ export default function ApplicationPage({
   const { data: job, isLoading } = useQuery({
     queryKey: ["job", id],
     queryFn: () => api.jobs.get(id),
+  });
+
+  const { data: candidateProfile } = useQuery({
+    queryKey: ["candidate-profile"],
+    queryFn: () => api.career.getProfile(),
   });
 
   const generateMutation = useMutation({
@@ -174,33 +180,14 @@ export default function ApplicationPage({
 
   const renderDocContent = (doc: GeneratedDocument) => {
     if (doc.type === "RESUME") {
-      // Resume content is JSON — show summary
-      try {
-        const parsed = JSON.parse(doc.content);
-        return (
-          <div className="space-y-4">
-            <div className="p-4 rounded-lg bg-primary/5 border border-primary/20">
-              <p className="text-xs font-semibold text-primary mb-1">Professional Summary</p>
-              <p className="text-sm text-foreground leading-relaxed">{parsed.professionalSummary}</p>
-            </div>
-            {parsed.orderedSkills?.length > 0 && (
-              <div>
-                <p className="text-xs font-semibold text-muted-foreground mb-2">Ordered Skills</p>
-                <div className="space-y-1.5">
-                  {parsed.orderedSkills.map((sg: { category: string; skills: string[] }) => (
-                    <div key={sg.category} className="flex gap-2 text-xs">
-                      <span className="text-muted-foreground w-28 shrink-0">{sg.category}:</span>
-                      <span className="text-foreground">{sg.skills.join(", ")}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        );
-      } catch {
-        return <pre className="text-sm text-foreground whitespace-pre-wrap">{doc.content}</pre>;
-      }
+      return (
+        <ResumeDocument
+          content={doc.content}
+          candidate={candidateProfile}
+          jobTitle={job?.title}
+          onEdit={() => setEditingContent(doc.content)}
+        />
+      );
     }
     return (
       <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">
@@ -243,7 +230,7 @@ export default function ApplicationPage({
             Generating your application package...
           </p>
           <p className="text-xs text-muted-foreground">
-            Gemini is writing a personalized cover letter, resume content, and recruiter messages. This may take 30–60 seconds.
+            Gemini is writing a personalized cover letter, resume content, and recruiter messages. This may take 30-60 seconds.
           </p>
         </div>
       )}
@@ -317,42 +304,44 @@ export default function ApplicationPage({
                 </div>
 
                 {/* Content */}
-                <div className="bg-muted/20 rounded-xl p-5 min-h-48">
-                  {editingContent !== null ? (
-                    <div className="space-y-3">
-                      <textarea
-                        value={editingContent}
-                        onChange={(e) => setEditingContent(e.target.value)}
-                        rows={12}
-                        className="w-full bg-input border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary resize-none"
-                      />
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => setEditingContent(null)}
-                          className="px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90"
-                        >
-                          Save
-                        </button>
-                        <button
-                          onClick={() => setEditingContent(null)}
-                          className="px-3 py-1.5 rounded-lg bg-muted text-muted-foreground text-xs"
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div>
-                      {renderDocContent(currentDoc)}
+                {editingContent !== null ? (
+                  <div className="bg-muted/20 rounded-xl p-5 min-h-48 space-y-3">
+                    <textarea
+                      value={editingContent}
+                      onChange={(e) => setEditingContent(e.target.value)}
+                      rows={12}
+                      className="w-full bg-input border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary resize-none font-mono"
+                    />
+                    <div className="flex gap-2">
                       <button
-                        onClick={() => setEditingContent(currentDoc.content)}
-                        className="mt-3 text-xs text-primary hover:underline"
+                        onClick={() => setEditingContent(null)}
+                        className="px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90"
                       >
-                        Edit content
+                        Done
+                      </button>
+                      <button
+                        onClick={() => setEditingContent(null)}
+                        className="px-3 py-1.5 rounded-lg bg-muted text-muted-foreground text-xs"
+                      >
+                        Cancel
                       </button>
                     </div>
-                  )}
-                </div>
+                  </div>
+                ) : activeTab === "resume" ? (
+                  <div>
+                    {renderDocContent(currentDoc)}
+                  </div>
+                ) : (
+                  <div className="bg-muted/20 rounded-xl p-5 min-h-48">
+                    {renderDocContent(currentDoc)}
+                    <button
+                      onClick={() => setEditingContent(currentDoc.content)}
+                      className="mt-3 text-xs text-primary hover:underline block"
+                    >
+                      Edit content
+                    </button>
+                  </div>
+                )}
 
                 <p className="text-[11px] text-muted-foreground">
                   Version {currentDoc.version} · Generated {new Date(currentDoc.createdAt).toLocaleString()}
