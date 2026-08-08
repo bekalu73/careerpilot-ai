@@ -1,0 +1,552 @@
+// Jobs Routes
+// /api/jobs/*
+
+import { Router, type Request, type Response } from "express";
+import { z } from "zod";
+import prisma from "../lib/prisma.js";
+import { analyzeJobDescription } from "../ai/services/job-analyzer.js";
+import {
+  matchCandidateToJob,
+  selectRelevantProjects,
+} from "../ai/services/matcher.js";
+import {
+  generateCoverLetter,
+  generateRecruiterMessage,
+  generateTailoredResume,
+  generateApplicationAnswer,
+} from "../ai/services/generator.js";
+import { factCheckDocument } from "../ai/services/fact-checker.js";
+import type { MessagePlatform } from "../ai/prompts/recruiter-message.js";
+import {
+  DocumentType,
+  JobStatus,
+} from "@prisma/client";
+import { getParam } from "../lib/utils.js";
+
+const router = Router();
+
+// Helper: serialize candidate profile for AI consumption
+async function getCandidateProfileJson(): Promise<string | null> {
+  const candidate = await prisma.candidate.findFirst({
+    include: {
+      experiences: true,
+      projects: true,
+      skills: true,
+      educations: true,
+      achievements: true,
+    },
+  });
+  if (!candidate) return null;
+  return JSON.stringify(candidate);
+}
+
+// ─── GET /api/jobs ────────────────────────────────────────────────────────────
+
+router.get("/", async (_req: Request, res: Response) => {
+  try {
+    const jobs = await prisma.job.findMany({
+      include: { jobMatch: true },
+      orderBy: { createdAt: "desc" },
+    });
+    return res.json(jobs);
+  } catch (err) {
+    return res.status(500).json({ error: "Failed to fetch jobs" });
+  }
+});
+
+// ─── POST /api/jobs ───────────────────────────────────────────────────────────
+
+const CreateJobSchema = z.object({
+  title: z.string().min(1),
+  company: z.string().min(1),
+  description: z.string().optional(),
+  applicationUrl: z.string().url().optional(),
+  sourceUrl: z.string().url().optional(),
+  location: z.string().optional(),
+  recruiterName: z.string().optional(),
+  notes: z.string().optional(),
+});
+
+router.post("/", async (req: Request, res: Response) => {
+  const body = CreateJobSchema.safeParse(req.body);
+  if (!body.success) {
+    return res.status(400).json({ error: body.error.flatten() });
+  }
+
+  try {
+    const job = await prisma.job.create({ data: body.data });
+    return res.status(201).json(job);
+  } catch (err) {
+    return res.status(500).json({ error: "Failed to create job" });
+  }
+});
+
+// ─── GET /api/jobs/:id ────────────────────────────────────────────────────────
+
+router.get("/:id", async (req: Request, res: Response) => {
+  try {
+    const job = await prisma.job.findUnique({
+      where: { id: getParam(req.params["id"]) },
+      include: {
+        jobMatch: {
+          include: {
+            matchedProjects: { include: { project: true } },
+            matchedExperiences: { include: { experience: true } },
+          },
+        },
+        documents: true,
+        applications: { include: { answers: true } },
+      },
+    });
+    if (!job) return res.status(404).json({ error: "Job not found" });
+    return res.json(job);
+  } catch (err) {
+    return res.status(500).json({ error: "Failed to fetch job" });
+  }
+});
+
+// ─── PATCH /api/jobs/:id ──────────────────────────────────────────────────────
+
+router.patch("/:id", async (req: Request, res: Response) => {
+  try {
+    const updated = await prisma.job.update({
+      where: { id: getParam(req.params["id"]) },
+      data: req.body,
+    });
+    return res.json(updated);
+  } catch (err) {
+    return res.status(500).json({ error: "Failed to update job" });
+  }
+});
+
+// ─── DELETE /api/jobs/:id ─────────────────────────────────────────────────────
+
+router.delete("/:id", async (req: Request, res: Response) => {
+  try {
+    await prisma.job.delete({ where: { id: getParam(req.params["id"]) } });
+    return res.json({ success: true });
+  } catch (err) {
+    return res.status(500).json({ error: "Failed to delete job" });
+  }
+});
+
+// ─── POST /api/jobs/:id/analyze ───────────────────────────────────────────────
+
+router.post("/:id/analyze", async (req: Request, res: Response) => {
+  const jobId = getParam(req.params["id"]);
+
+  try {
+    const job = await prisma.job.findUnique({ where: { id: jobId } });
+    if (!job) return res.status(404).json({ error: "Job not found" });
+    if (!job.description) {
+      return res.status(400).json({ error: "Job has no description to analyze" });
+    }
+
+    // Update status
+    await prisma.job.update({
+      where: { id: jobId },
+      data: { status: JobStatus.ANALYZING },
+    });
+
+    const analysis = await analyzeJobDescription(job.description, jobId);
+
+    // Save analysis results to job
+    const updated = await prisma.job.update({
+      where: { id: jobId },
+      data: {
+        title: analysis.title || job.title,
+        company: analysis.company || job.company,
+        location: analysis.location ?? job.location,
+        employmentType: analysis.employmentType ?? undefined,
+        seniority: analysis.seniority ?? undefined,
+        requiredSkills: analysis.requiredSkills,
+        preferredSkills: analysis.preferredSkills,
+        responsibilities: analysis.responsibilities,
+        technologies: analysis.technologies,
+        domains: analysis.domains,
+        keywords: analysis.keywords,
+        softSkills: analysis.softSkills,
+        educationReq: analysis.educationReq ?? null,
+        experienceReq: analysis.experienceReq ?? null,
+        isAnalyzed: true,
+        analyzedAt: new Date(),
+        status: JobStatus.READY_TO_APPLY,
+      },
+    });
+
+    return res.json({ job: updated, analysis });
+  } catch (err) {
+    console.error("[POST /jobs/:id/analyze]", err);
+    await prisma.job.update({
+      where: { id: jobId },
+      data: { status: JobStatus.SAVED },
+    }).catch(() => {});
+    return res.status(500).json({
+      error: "Failed to analyze job",
+      details: err instanceof Error ? err.message : "Unknown error",
+    });
+  }
+});
+
+// ─── POST /api/jobs/:id/match ─────────────────────────────────────────────────
+
+router.post("/:id/match", async (req: Request, res: Response) => {
+  const jobId = getParam(req.params["id"]);
+
+  try {
+    const [job, candidateProfileJson] = await Promise.all([
+      prisma.job.findUnique({ where: { id: jobId } }),
+      getCandidateProfileJson(),
+    ]);
+
+    if (!job) return res.status(404).json({ error: "Job not found" });
+    if (!job.isAnalyzed) {
+      return res
+        .status(400)
+        .json({ error: "Job must be analyzed before matching" });
+    }
+    if (!candidateProfileJson) {
+      return res.status(400).json({ error: "No candidate profile found" });
+    }
+
+    const candidate = await prisma.candidate.findFirst({ include: { projects: true } });
+    if (!candidate) return res.status(400).json({ error: "No candidate profile found" });
+
+    const jobRequirementsJson = JSON.stringify({
+      title: job.title,
+      requiredSkills: job.requiredSkills,
+      preferredSkills: job.preferredSkills,
+      technologies: job.technologies,
+      domains: job.domains,
+      responsibilities: job.responsibilities,
+      seniority: job.seniority,
+      experienceReq: job.experienceReq,
+    });
+
+    const projectsForSelection = JSON.stringify(
+      candidate.projects.map((p) => ({
+        id: p.id,
+        name: p.name,
+        description: p.description,
+        technologies: p.technologies,
+        domains: p.domains,
+        keywords: p.keywords,
+        responsibilities: p.responsibilities,
+        achievements: p.achievements,
+      }))
+    );
+
+    // Run matching and project selection in parallel
+    const [matchResult, selectedProjects] = await Promise.all([
+      matchCandidateToJob(candidateProfileJson, jobRequirementsJson, jobId),
+      selectRelevantProjects(projectsForSelection, jobRequirementsJson, jobId),
+    ]);
+
+    // Delete existing match if any
+    await prisma.jobMatch.deleteMany({ where: { jobId } });
+
+    // Save match
+    const jobMatch = await prisma.jobMatch.create({
+      data: {
+        jobId,
+        technicalScore: matchResult.technicalScore,
+        experienceScore: matchResult.experienceScore,
+        projectScore: matchResult.projectScore,
+        seniorityScore: matchResult.seniorityScore,
+        domainScore: matchResult.domainScore,
+        overallScore: matchResult.overallScore,
+        strongMatches: matchResult.strongMatches,
+        potentialGaps: matchResult.potentialGaps,
+        explanation: matchResult.explanation,
+        matchedProjects: {
+          create: selectedProjects.slice(0, 5).map((sp, index) => ({
+            projectId: sp.projectId,
+            relevanceScore: sp.relevanceScore,
+            reason: sp.reason,
+            rankOrder: index,
+          })),
+        },
+      },
+      include: {
+        matchedProjects: { include: { project: true } },
+      },
+    });
+
+    return res.json({ jobMatch, matchResult, selectedProjects });
+  } catch (err) {
+    console.error("[POST /jobs/:id/match]", err);
+    return res.status(500).json({
+      error: "Failed to match candidate to job",
+      details: err instanceof Error ? err.message : "Unknown error",
+    });
+  }
+});
+
+// ─── POST /api/jobs/:id/generate ─────────────────────────────────────────────
+// Generates the full application package
+
+router.post("/:id/generate", async (req: Request, res: Response) => {
+  const jobId = getParam(req.params["id"]);
+
+  try {
+    const [job, candidateProfileJson] = await Promise.all([
+      prisma.job.findUnique({
+        where: { id: jobId },
+        include: { jobMatch: { include: { matchedProjects: { include: { project: true } } } } },
+      }),
+      getCandidateProfileJson(),
+    ]);
+
+    if (!job) return res.status(404).json({ error: "Job not found" });
+    if (!candidateProfileJson) {
+      return res.status(400).json({ error: "No candidate profile found" });
+    }
+    if (!job.jobMatch) {
+      return res.status(400).json({ error: "Run match analysis before generating documents" });
+    }
+
+    const jobDetails = JSON.stringify({
+      title: job.title,
+      company: job.company,
+      description: job.description,
+      technologies: job.technologies,
+      domains: job.domains,
+      requiredSkills: job.requiredSkills,
+    });
+
+    const selectedProjectsJson = JSON.stringify(
+      job.jobMatch.matchedProjects.map((mp) => ({
+        name: mp.project.name,
+        description: mp.project.description,
+        technologies: mp.project.technologies,
+        reason: mp.reason,
+      }))
+    );
+
+    const matchedExperienceJson = JSON.stringify({
+      strongMatches: job.jobMatch.strongMatches,
+      explanation: job.jobMatch.explanation,
+    });
+
+    // Generate all documents in parallel
+    const [coverLetter, linkedinMsg, telegramMsg, tailoredResume] =
+      await Promise.all([
+        generateCoverLetter(
+          candidateProfileJson,
+          jobDetails,
+          selectedProjectsJson,
+          matchedExperienceJson,
+          jobId
+        ),
+        generateRecruiterMessage(
+          candidateProfileJson,
+          jobDetails,
+          "linkedin",
+          selectedProjectsJson,
+          jobId
+        ),
+        generateRecruiterMessage(
+          candidateProfileJson,
+          jobDetails,
+          "telegram",
+          selectedProjectsJson,
+          jobId
+        ),
+        generateTailoredResume(
+          candidateProfileJson,
+          jobDetails,
+          selectedProjectsJson,
+          matchedExperienceJson,
+          jobId
+        ),
+      ]);
+
+    // Save documents
+    const docsToCreate = [
+      { type: DocumentType.COVER_LETTER, content: coverLetter },
+      {
+        type: DocumentType.RECRUITER_MESSAGE_LINKEDIN,
+        content: linkedinMsg,
+      },
+      {
+        type: DocumentType.RECRUITER_MESSAGE_TELEGRAM,
+        content: telegramMsg,
+      },
+      {
+        type: DocumentType.RESUME,
+        content: JSON.stringify(tailoredResume),
+      },
+    ];
+
+    // Delete old versions
+    await prisma.generatedDocument.deleteMany({ where: { jobId } });
+
+    const savedDocs = await Promise.all(
+      docsToCreate.map((doc) =>
+        prisma.generatedDocument.create({ data: { jobId, ...doc } })
+      )
+    );
+
+    return res.json({ documents: savedDocs });
+  } catch (err) {
+    console.error("[POST /jobs/:id/generate]", err);
+    return res.status(500).json({
+      error: "Failed to generate application package",
+      details: err instanceof Error ? err.message : "Unknown error",
+    });
+  }
+});
+
+// ─── POST /api/jobs/:id/fact-check ────────────────────────────────────────────
+
+router.post("/:id/fact-check", async (req: Request, res: Response) => {
+  const jobId = getParam(req.params["id"]);
+  const { documentId } = req.body as { documentId: string };
+
+  try {
+    const [doc, candidateProfileJson] = await Promise.all([
+      prisma.generatedDocument.findUnique({ where: { id: documentId } }),
+      getCandidateProfileJson(),
+    ]);
+
+    if (!doc) return res.status(404).json({ error: "Document not found" });
+    if (!candidateProfileJson) {
+      return res.status(400).json({ error: "No candidate profile found" });
+    }
+
+    const result = await factCheckDocument(
+      doc.content,
+      candidateProfileJson,
+      jobId
+    );
+
+    const updated = await prisma.generatedDocument.update({
+      where: { id: documentId },
+      data: {
+        factChecked: true,
+        factCheckPassed: result.passed,
+        flaggedClaims: result.flaggedClaims as unknown as import("@prisma/client").Prisma.JsonArray,
+        approvedAt: result.passed ? new Date() : null,
+      },
+    });
+
+    return res.json({ document: updated, factCheckResult: result });
+  } catch (err) {
+    console.error("[POST /jobs/:id/fact-check]", err);
+    return res.status(500).json({ error: "Failed to fact-check document" });
+  }
+});
+
+// ─── POST /api/jobs/:id/recruiter-message ────────────────────────────────────
+
+router.post("/:id/recruiter-message", async (req: Request, res: Response) => {
+  const jobId = getParam(req.params["id"]);
+  const { platform } = req.body as { platform: MessagePlatform };
+
+  try {
+    const [job, candidateProfileJson] = await Promise.all([
+      prisma.job.findUnique({
+        where: { id: jobId },
+        include: { jobMatch: { include: { matchedProjects: { include: { project: true } } } } },
+      }),
+      getCandidateProfileJson(),
+    ]);
+
+    if (!job) return res.status(404).json({ error: "Job not found" });
+    if (!candidateProfileJson) {
+      return res.status(400).json({ error: "No candidate profile found" });
+    }
+
+    const jobDetails = JSON.stringify({ title: job.title, company: job.company });
+    const selectedProjectsJson = JSON.stringify(
+      job.jobMatch?.matchedProjects.map((mp) => mp.project.name) ?? []
+    );
+
+    const message = await generateRecruiterMessage(
+      candidateProfileJson,
+      jobDetails,
+      platform,
+      selectedProjectsJson,
+      jobId
+    );
+
+    const docTypeMap: Record<MessagePlatform, DocumentType> = {
+      linkedin: DocumentType.RECRUITER_MESSAGE_LINKEDIN,
+      telegram: DocumentType.RECRUITER_MESSAGE_TELEGRAM,
+      whatsapp: DocumentType.RECRUITER_MESSAGE_WHATSAPP,
+      email: DocumentType.RECRUITER_MESSAGE_EMAIL,
+    };
+
+    const doc = await prisma.generatedDocument.create({
+      data: { jobId, type: docTypeMap[platform], content: message },
+    });
+
+    return res.json({ document: doc });
+  } catch (err) {
+    return res.status(500).json({ error: "Failed to generate recruiter message" });
+  }
+});
+
+// ─── POST /api/jobs/:id/answer ────────────────────────────────────────────────
+
+router.post("/:id/answer", async (req: Request, res: Response) => {
+  const jobId = getParam(req.params["id"]);
+  const { question, applicationId } = req.body as {
+    question: string;
+    applicationId: string;
+  };
+
+  try {
+    const [job, candidateProfileJson] = await Promise.all([
+      prisma.job.findUnique({ where: { id: jobId } }),
+      getCandidateProfileJson(),
+    ]);
+
+    if (!job) return res.status(404).json({ error: "Job not found" });
+    if (!candidateProfileJson) {
+      return res.status(400).json({ error: "No candidate profile found" });
+    }
+
+    const jobDetails = JSON.stringify({
+      title: job.title,
+      company: job.company,
+      description: job.description,
+    });
+
+    const answer = await generateApplicationAnswer(
+      candidateProfileJson,
+      jobDetails,
+      question,
+      jobId
+    );
+
+    const isInsufficient = answer.trim() === "INSUFFICIENT_INFORMATION";
+
+    const savedAnswer = await prisma.applicationAnswer.upsert({
+      where: {
+        id: applicationId ?? "new",
+      },
+      create: {
+        applicationId,
+        question,
+        answer: isInsufficient ? null : answer,
+        isGenerated: true,
+        isApproved: false,
+      },
+      update: {
+        answer: isInsufficient ? null : answer,
+        isGenerated: true,
+        isApproved: false,
+      },
+    });
+
+    return res.json({
+      answer: savedAnswer,
+      insufficient: isInsufficient,
+    });
+  } catch (err) {
+    return res.status(500).json({ error: "Failed to generate answer" });
+  }
+});
+
+export default router;

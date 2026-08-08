@@ -1,13 +1,390 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
-  provider = "prisma-client"
-  output   = "../generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "postgresql"
+}
+
+// ─── Enums ───────────────────────────────────────────────────────────────────
+
+enum SkillProficiency {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+  EXPERT
+}
+
+enum JobStatus {
+  SAVED
+  ANALYZING
+  READY_TO_APPLY
+  APPLIED
+  RECRUITER_CONTACT
+  SCREENING
+  INTERVIEW
+  TECHNICAL_INTERVIEW
+  FINAL_INTERVIEW
+  OFFER
+  REJECTED
+}
+
+enum DocumentType {
+  RESUME
+  COVER_LETTER
+  RECRUITER_MESSAGE_LINKEDIN
+  RECRUITER_MESSAGE_TELEGRAM
+  RECRUITER_MESSAGE_WHATSAPP
+  RECRUITER_MESSAGE_EMAIL
+}
+
+enum ApplicationStatus {
+  DRAFT
+  SUBMITTED
+  TRACKING
+  CLOSED
+}
+
+enum AIOperationType {
+  RESUME_PARSE
+  JOB_ANALYZE
+  CANDIDATE_MATCH
+  PROJECT_SELECT
+  RESUME_GENERATE
+  COVER_LETTER_GENERATE
+  RECRUITER_MESSAGE_GENERATE
+  APPLICATION_ANSWER_GENERATE
+  FACT_CHECK
+  JOB_URL_EXTRACT
+}
+
+enum EmploymentType {
+  FULL_TIME
+  PART_TIME
+  CONTRACT
+  FREELANCE
+  INTERNSHIP
+  REMOTE
+}
+
+enum SeniorityLevel {
+  ENTRY
+  JUNIOR
+  MID
+  SENIOR
+  LEAD
+  PRINCIPAL
+  STAFF
+  DIRECTOR
+  VP
+  EXECUTIVE
+}
+
+// ─── Candidate Profile ────────────────────────────────────────────────────────
+
+model Candidate {
+  id                 String   @id @default(cuid())
+  name               String
+  email              String?
+  phone              String?
+  location           String?
+  professionalSummary String?
+  portfolioUrl       String?
+  githubUrl          String?
+  linkedinUrl        String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  experiences  Experience[]
+  projects     Project[]
+  skills       Skill[]
+  educations   Education[]
+  achievements Achievement[]
+}
+
+// ─── Experience ───────────────────────────────────────────────────────────────
+
+model Experience {
+  id               String    @id @default(cuid())
+  candidateId      String
+  candidate        Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+
+  company          String
+  jobTitle         String
+  location         String?
+  startDate        DateTime
+  endDate          DateTime?
+  isCurrent        Boolean   @default(false)
+  description      String?
+  responsibilities String[]
+  achievements     String[]
+  technologies     String[]
+  domains          String[]
+
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  matchedExperiences MatchedExperience[]
+}
+
+// ─── Project ──────────────────────────────────────────────────────────────────
+
+model Project {
+  id               String    @id @default(cuid())
+  candidateId      String
+  candidate        Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+
+  name             String
+  description      String?
+  role             String?
+  technologies     String[]
+  responsibilities String[]
+  achievements     String[]
+  domains          String[]
+  keywords         String[]
+  githubUrl        String?
+  demoUrl          String?
+  startDate        DateTime?
+  endDate          DateTime?
+  isCurrent        Boolean   @default(false)
+  isHighlighted    Boolean   @default(false)
+  displayOrder     Int       @default(0)
+
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  matchedProjects MatchedProject[]
+}
+
+// ─── Skill ────────────────────────────────────────────────────────────────────
+
+model Skill {
+  id          String             @id @default(cuid())
+  candidateId String
+  candidate   Candidate          @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+
+  name        String
+  category    String
+  proficiency SkillProficiency?
+  confirmed   Boolean            @default(false) // User must confirm AI-assigned proficiency
+  yearsOfExp  Float?
+
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+}
+
+// ─── Education ────────────────────────────────────────────────────────────────
+
+model Education {
+  id          String    @id @default(cuid())
+  candidateId String
+  candidate   Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+
+  institution String
+  degree      String?
+  field       String?
+  startDate   DateTime?
+  endDate     DateTime?
+  gpa         String?
+  description String?
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+// ─── Achievement ──────────────────────────────────────────────────────────────
+
+model Achievement {
+  id           String    @id @default(cuid())
+  candidateId  String
+  candidate    Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+
+  title        String
+  description  String?
+  date         DateTime?
+  evidence     String?
+  experienceId String?
+  projectId    String?
+
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+// ─── Job ──────────────────────────────────────────────────────────────────────
+
+model Job {
+  id             String          @id @default(cuid())
+  title          String
+  company        String
+  location       String?
+  employmentType EmploymentType?
+  seniority      SeniorityLevel?
+  description    String?
+  applicationUrl String?
+  sourceUrl      String?         // URL if added via URL method
+  recruiterName  String?
+  recruiterTitle String?
+  status         JobStatus       @default(SAVED)
+  notes          String?
+
+  // AI-extracted fields
+  requiredSkills    String[]
+  preferredSkills   String[]
+  responsibilities  String[]
+  technologies      String[]
+  domains           String[]
+  keywords          String[]
+  softSkills        String[]
+  educationReq      String?
+  experienceReq     String?
+
+  isAnalyzed     Boolean  @default(false)
+  analyzedAt     DateTime?
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  jobMatch      JobMatch?
+  applications  Application[]
+  documents     GeneratedDocument[]
+  aiExecutions  AIExecution[]
+}
+
+// ─── Job Match ────────────────────────────────────────────────────────────────
+
+model JobMatch {
+  id              String @id @default(cuid())
+  jobId           String @unique
+  job             Job    @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  technicalScore  Float
+  experienceScore Float
+  projectScore    Float
+  seniorityScore  Float
+  domainScore     Float
+  overallScore    Float
+
+  // Explainability
+  strongMatches   String[] // skills/technologies that match strongly
+  potentialGaps   String[] // skills missing or weak
+  explanation     String?  // AI narrative explanation
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  matchedProjects    MatchedProject[]
+  matchedExperiences MatchedExperience[]
+}
+
+model MatchedProject {
+  id         String   @id @default(cuid())
+  jobMatchId String
+  jobMatch   JobMatch @relation(fields: [jobMatchId], references: [id], onDelete: Cascade)
+  projectId  String
+  project    Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  relevanceScore Float
+  reason         String // Why this project was selected
+  rankOrder      Int
+
+  createdAt      DateTime @default(now())
+}
+
+model MatchedExperience {
+  id           String     @id @default(cuid())
+  jobMatchId   String
+  jobMatch     JobMatch   @relation(fields: [jobMatchId], references: [id], onDelete: Cascade)
+  experienceId String
+  experience   Experience @relation(fields: [experienceId], references: [id], onDelete: Cascade)
+
+  relevanceScore    Float
+  emphasizedAspects String[] // Which aspects to emphasize for this job
+  reason            String
+  rankOrder         Int
+
+  createdAt         DateTime @default(now())
+}
+
+// ─── Application ──────────────────────────────────────────────────────────────
+
+model Application {
+  id        String            @id @default(cuid())
+  jobId     String
+  job       Job               @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  status    ApplicationStatus @default(DRAFT)
+  notes     String?
+  appliedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  answers  ApplicationAnswer[]
+  events   ApplicationEvent[]
+}
+
+model ApplicationAnswer {
+  id            String      @id @default(cuid())
+  applicationId String
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  question      String
+  answer        String?
+  isGenerated   Boolean     @default(false)
+  isApproved    Boolean     @default(false)
+  factChecked   Boolean     @default(false)
+
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+}
+
+model ApplicationEvent {
+  id            String      @id @default(cuid())
+  applicationId String
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  status        JobStatus
+  note          String?
+  occurredAt    DateTime    @default(now())
+  createdAt     DateTime    @default(now())
+}
+
+// ─── Generated Documents ──────────────────────────────────────────────────────
+
+model GeneratedDocument {
+  id       String       @id @default(cuid())
+  jobId    String
+  job      Job          @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  type     DocumentType
+  content  String       @db.Text
+  version  Int          @default(1)
+
+  // Fact check results
+  factChecked      Boolean  @default(false)
+  factCheckPassed  Boolean?
+  flaggedClaims    Json?    // Array of { claim, reason, action }
+  approvedAt       DateTime?
+
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+// ─── AI Execution Log ─────────────────────────────────────────────────────────
+
+model AIExecution {
+  id              String          @id @default(cuid())
+  jobId           String?
+  job             Job?            @relation(fields: [jobId], references: [id], onDelete: SetNull)
+
+  operationType   AIOperationType
+  model           String
+  inputMetadata   Json?           // Non-sensitive metadata (lengths, types, not full prompts)
+  outputStatus    String          // "success" | "error" | "validation_failed"
+  tokensUsed      Int?
+  durationMs      Int?
+  errorMessage    String?
+
+  createdAt       DateTime        @default(now())
 }
