@@ -14,6 +14,7 @@ import {
   generateRecruiterMessage,
   generateTailoredResume,
   generateApplicationAnswer,
+  chatWithApplicationCopilot,
 } from "../ai/services/generator.js";
 import { factCheckDocument } from "../ai/services/fact-checker.js";
 import type { MessagePlatform } from "../ai/prompts/recruiter-message.js";
@@ -487,14 +488,37 @@ router.post("/:id/recruiter-message", async (req: Request, res: Response) => {
   }
 });
 
+// ─── GET /api/jobs/:id/answers ───────────────────────────────────────────────
+
+router.get("/:id/answers", async (req: Request, res: Response) => {
+  const jobId = getParam(req.params["id"]);
+  try {
+    const application = await prisma.application.findFirst({
+      where: { jobId },
+      include: {
+        answers: { orderBy: { createdAt: "desc" } },
+      },
+    });
+
+    return res.json(application?.answers ?? []);
+  } catch (err) {
+    console.error("[GET /api/jobs/:id/answers]", err);
+    return res.status(500).json({ error: "Failed to fetch application answers" });
+  }
+});
+
 // ─── POST /api/jobs/:id/answer ────────────────────────────────────────────────
 
 router.post("/:id/answer", async (req: Request, res: Response) => {
   const jobId = getParam(req.params["id"]);
-  const { question, applicationId } = req.body as {
+  const { question, instructions } = req.body as {
     question: string;
-    applicationId: string;
+    instructions?: string;
   };
+
+  if (!question || typeof question !== "string") {
+    return res.status(400).json({ error: "Question is required" });
+  }
 
   try {
     const [job, candidateProfileJson] = await Promise.all([
@@ -511,32 +535,41 @@ router.post("/:id/answer", async (req: Request, res: Response) => {
       title: job.title,
       company: job.company,
       description: job.description,
+      requiredSkills: job.requiredSkills,
+      responsibilities: job.responsibilities,
     });
 
     const answer = await generateApplicationAnswer(
       candidateProfileJson,
       jobDetails,
       question,
-      jobId
+      jobId,
+      instructions
     );
 
     const isInsufficient = answer.trim() === "INSUFFICIENT_INFORMATION";
 
-    const savedAnswer = await prisma.applicationAnswer.upsert({
-      where: {
-        id: applicationId ?? "new",
-      },
-      create: {
-        applicationId,
+    // Find or create application
+    let application = await prisma.application.findFirst({
+      where: { jobId },
+    });
+
+    if (!application) {
+      application = await prisma.application.create({
+        data: {
+          jobId,
+          status: "DRAFT",
+        },
+      });
+    }
+
+    const savedAnswer = await prisma.applicationAnswer.create({
+      data: {
+        applicationId: application.id,
         question,
         answer: isInsufficient ? null : answer,
         isGenerated: true,
-        isApproved: false,
-      },
-      update: {
-        answer: isInsufficient ? null : answer,
-        isGenerated: true,
-        isApproved: false,
+        isApproved: !isInsufficient,
       },
     });
 
@@ -545,7 +578,70 @@ router.post("/:id/answer", async (req: Request, res: Response) => {
       insufficient: isInsufficient,
     });
   } catch (err) {
+    console.error("[POST /api/jobs/:id/answer]", err);
     return res.status(500).json({ error: "Failed to generate answer" });
+  }
+});
+
+// ─── DELETE /api/jobs/:id/answers/:answerId ───────────────────────────────────
+
+router.delete("/:id/answers/:answerId", async (req: Request, res: Response) => {
+  const answerId = getParam(req.params["answerId"]);
+  try {
+    await prisma.applicationAnswer.delete({ where: { id: answerId } });
+    return res.json({ success: true });
+  } catch (err) {
+    console.error("[DELETE /api/jobs/:id/answers/:answerId]", err);
+    return res.status(500).json({ error: "Failed to delete answer" });
+  }
+});
+
+// ─── POST /api/jobs/:id/chat ──────────────────────────────────────────────────
+
+router.post("/:id/chat", async (req: Request, res: Response) => {
+  const jobId = getParam(req.params["id"]);
+  const { message, history = [] } = req.body as {
+    message: string;
+    history?: Array<{ role: "user" | "assistant"; content: string }>;
+  };
+
+  if (!message || typeof message !== "string") {
+    return res.status(400).json({ error: "Message is required" });
+  }
+
+  try {
+    const [job, candidateProfileJson] = await Promise.all([
+      prisma.job.findUnique({ where: { id: jobId } }),
+      getCandidateProfileJson(),
+    ]);
+
+    if (!job) return res.status(404).json({ error: "Job not found" });
+    if (!candidateProfileJson) {
+      return res.status(400).json({ error: "No candidate profile found" });
+    }
+
+    const jobDetails = JSON.stringify({
+      title: job.title,
+      company: job.company,
+      description: job.description,
+      requiredSkills: job.requiredSkills,
+      responsibilities: job.responsibilities,
+      domains: job.domains,
+      keywords: job.keywords,
+    });
+
+    const reply = await chatWithApplicationCopilot(
+      candidateProfileJson,
+      jobDetails,
+      history,
+      message,
+      jobId
+    );
+
+    return res.json({ reply });
+  } catch (err) {
+    console.error("[POST /api/jobs/:id/chat]", err);
+    return res.status(500).json({ error: "Failed to communicate with AI Copilot" });
   }
 });
 

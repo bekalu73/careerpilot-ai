@@ -1,7 +1,11 @@
+"use strict";
 // Application Answer Prompt & AI Copilot Chat Prompt
 // Tailored for answering Google, Greenhouse, Lever, Workday, and job site application questions
-
-export const APPLICATION_ANSWER_SYSTEM = `You are an expert AI Career Copilot and Application Strategist helping the candidate craft perfect, compelling answers for job applications and interview questions.
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.APPLICATION_ANSWER_SYSTEM = void 0;
+exports.buildApplicationAnswerPrompt = buildApplicationAnswerPrompt;
+exports.buildChatCopilotPrompt = buildChatCopilotPrompt;
+exports.APPLICATION_ANSWER_SYSTEM = `You are an expert AI Career Copilot and Application Strategist helping the candidate craft perfect, compelling answers for job applications and interview questions.
 
 CRITICAL RULES:
 1. Answer factually grounded in the candidate's actual career data (experience, skills, projects, education).
@@ -13,14 +17,8 @@ CRITICAL RULES:
 7. Be concise, punchy, and impactful. For application form questions, keep answers focused (typically 100-250 words unless asked otherwise).
 8. Never invent false metrics, degrees, or employers.
 9. Return direct, ready-to-paste answer text without conversational filler like "Here is your answer:" unless engaged in interactive conversational chat.`;
-
-export function buildApplicationAnswerPrompt(
-  candidateProfile: string,
-  jobDetails: string,
-  question: string,
-  instructions?: string
-): string {
-  return `Answer this job application question for the candidate based on their verified career profile and the target job.
+function buildApplicationAnswerPrompt(candidateProfile, jobDetails, question, instructions) {
+    return `Answer this job application question for the candidate based on their verified career profile and the target job.
 
 CANDIDATE CAREER PROFILE:
 ${candidateProfile}
@@ -35,14 +33,8 @@ ${instructions ? `SPECIAL INSTRUCTIONS:\n${instructions}\n` : ""}
 
 Write a compelling, professional, ready-to-copy answer that directly addresses the question, highlights relevant skills (e.g. RAG, Generative AI, AI Chatbots, Full-Stack ML), and connects the candidate's real achievements to what the company is looking for. No emojis, no em-dashes.`;
 }
-
-export function buildChatCopilotPrompt(
-  candidateProfile: string,
-  jobDetails: string,
-  history: Array<{ role: "user" | "assistant"; content: string }>,
-  newMessage: string
-): { system: string; messages: Array<{ role: "system" | "user" | "assistant"; content: string }> } {
-  const system = `${APPLICATION_ANSWER_SYSTEM}
+function buildChatCopilotPrompt(candidateProfile, jobDetails, history, newMessage) {
+    const system = `${exports.APPLICATION_ANSWER_SYSTEM}
 
 You are acting as the candidate's dedicated Job Application Copilot for this specific job. 
 You can answer any question about how the candidate fits the role, draft answers to custom application prompts, provide elevator pitches, help negotiate salary, explain technical trade-offs from their projects, or rewrite responses.
@@ -52,15 +44,14 @@ ${candidateProfile}
 
 JOB DETAILS:
 ${jobDetails}`;
-
-  const formattedMessages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [
-    { role: "system", content: system },
-    ...history.map((h) => ({
-      role: h.role,
-      content: h.content,
-    })),
-    { role: "user", content: newMessage },
-  ];
-
-  return { system, messages: formattedMessages };
+    const formattedMessages = [
+        { role: "system", content: system },
+        ...history.map((h) => ({
+            role: h.role,
+            content: h.content,
+        })),
+        { role: "user", content: newMessage },
+    ];
+    return { system, messages: formattedMessages };
 }
+//# sourceMappingURL=application-answer.js.map

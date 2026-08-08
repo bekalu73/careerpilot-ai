@@ -16,6 +16,7 @@ import {
   Wrench,
   GraduationCap,
   Trophy,
+  HelpCircle,
 } from "lucide-react";
 import { GithubIcon, LinkedinIcon } from "@/components/icons";
 import Link from "next/link";
@@ -109,6 +110,12 @@ export default function CareerProfilePage() {
       label: "Education",
       count: candidate.educations?.length ?? 0,
       icon: GraduationCap,
+    },
+    {
+      href: "/career/questions",
+      label: "Application Q&A Bank",
+      count: candidate.profileAnswers?.length ?? 0,
+      icon: HelpCircle,
     },
   ];
 
@@ -270,20 +277,25 @@ export default function CareerProfilePage() {
       </div>
 
       {/* Section cards */}
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {sections.map(({ href, label, count, icon: Icon }) => (
           <Link
             key={href}
             href={href}
-            className="card-premium p-4 flex items-center gap-3 hover:border-primary/30 transition-colors"
+            className="card-premium p-4 flex items-center justify-between group hover:border-primary/40 hover:bg-primary/[0.02] transition-all"
           >
-            <div className="h-9 w-9 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
-              <Icon className="h-4 w-4 text-primary" />
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0 group-hover:bg-primary/20 transition-colors">
+                <Icon className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-foreground">{label}</p>
+                <p className="text-xs text-muted-foreground">{count} entries</p>
+              </div>
             </div>
-            <div>
-              <p className="text-sm font-medium text-foreground">{label}</p>
-              <p className="text-xs text-muted-foreground">{count} entries</p>
-            </div>
+            <span className="text-xs font-medium text-primary bg-primary/10 px-2.5 py-1 rounded-md border border-primary/20 group-hover:bg-primary group-hover:text-primary-foreground transition-all">
+              Manage & Add →
+            </span>
           </Link>
         ))}
       </div>

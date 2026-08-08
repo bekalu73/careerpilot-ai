@@ -6,6 +6,7 @@ import { z } from "zod";
 import prisma from "../lib/prisma.js";
 import { getParam } from "../lib/utils.js";
 import { parseResumeHtml } from "../ai/services/resume-parser.js";
+import { generateApplicationAnswer } from "../ai/services/generator.js";
 
 const router = Router();
 
@@ -20,6 +21,7 @@ router.get("/profile", async (_req: Request, res: Response) => {
         skills: { orderBy: { category: "asc" } },
         educations: { orderBy: { startDate: "desc" } },
         achievements: { orderBy: { date: "desc" } },
+        profileAnswers: { orderBy: { createdAt: "asc" } },
       },
     });
 
@@ -498,6 +500,121 @@ router.delete("/achievements/:id", async (req: Request, res: Response) => {
     return res.json({ success: true });
   } catch (err) {
     return res.status(500).json({ error: "Failed to delete achievement" });
+  }
+});
+
+// ─── Profile Common Q&A Bank CRUD ─────────────────────────────────────────────
+
+router.get("/questions", async (_req: Request, res: Response) => {
+  try {
+    const candidate = await prisma.candidate.findFirst();
+    if (!candidate) return res.status(404).json({ error: "No profile found" });
+
+    const questions = await prisma.profileAnswer.findMany({
+      where: { candidateId: candidate.id },
+      orderBy: { createdAt: "asc" },
+    });
+
+    return res.json(questions);
+  } catch (err) {
+    console.error("[GET /career/questions]", err);
+    return res.status(500).json({ error: "Failed to fetch profile questions" });
+  }
+});
+
+router.post("/questions/generate", async (req: Request, res: Response) => {
+  const { question, category } = req.body as { question: string; category?: string };
+  if (!question || typeof question !== "string") {
+    return res.status(400).json({ error: "Question is required" });
+  }
+
+  try {
+    const candidate = await prisma.candidate.findFirst({
+      include: {
+        experiences: { orderBy: { startDate: "desc" } },
+        projects: { orderBy: { displayOrder: "asc" } },
+        skills: { orderBy: { category: "asc" } },
+        educations: { orderBy: { startDate: "desc" } },
+        achievements: { orderBy: { date: "desc" } },
+      },
+    });
+
+    if (!candidate) return res.status(404).json({ error: "No profile found" });
+
+    const candidateProfileJson = JSON.stringify({
+      name: candidate.name,
+      location: candidate.location,
+      portfolioUrl: candidate.portfolioUrl || "https://bekalu-sisay.vercel.app/",
+      githubUrl: candidate.githubUrl,
+      linkedinUrl: candidate.linkedinUrl,
+      professionalSummary: candidate.professionalSummary,
+      experiences: candidate.experiences,
+      projects: candidate.projects,
+      skills: candidate.skills,
+      educations: candidate.educations,
+    });
+
+    const jobContext = "Standard job application question for software engineering, AI/ML, and tech roles (LinkedIn, Greenhouse, Lever, Workday, Ashby). Highlight RAG, Generative AI, chatbots, and hands-on production systems.";
+
+    const generatedAnswer = await generateApplicationAnswer(
+      candidateProfileJson,
+      jobContext,
+      question
+    );
+
+    return res.json({ answer: generatedAnswer });
+  } catch (err) {
+    console.error("[POST /career/questions/generate]", err);
+    return res.status(500).json({ error: "Failed to generate profile answer" });
+  }
+});
+
+router.post("/questions", async (req: Request, res: Response) => {
+  try {
+    const candidate = await prisma.candidate.findFirst();
+    if (!candidate) return res.status(404).json({ error: "No profile found" });
+
+    const { question, answer, category = "General", isCustom = false } = req.body;
+
+    const item = await prisma.profileAnswer.create({
+      data: {
+        candidateId: candidate.id,
+        question,
+        answer,
+        category,
+        isCustom,
+      },
+    });
+
+    return res.status(201).json(item);
+  } catch (err) {
+    console.error("[POST /career/questions]", err);
+    return res.status(500).json({ error: "Failed to save profile question" });
+  }
+});
+
+router.patch("/questions/:id", async (req: Request, res: Response) => {
+  try {
+    const updated = await prisma.profileAnswer.update({
+      where: { id: getParam(req.params["id"]) },
+      data: req.body,
+    });
+    return res.json(updated);
+  } catch (err) {
+    console.error("[PATCH /career/questions/:id]", err);
+    return res.status(500).json({ error: "Failed to update profile question" });
+  }
+});
+
+router.delete("/questions/:id", async (req: Request, res: Response) => {
+  try {
+    await prisma.profileAnswer.delete({
+      where: { id: getParam(req.params["id"]) },
+    });
+    return res.json({ success: true });
+  } catch (err) {
+    console.error("[DELETE /career/questions/:id]", err);
+    return res.status(500).json({ error: "Failed to delete profile question" });
   }
 });
 

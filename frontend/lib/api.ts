@@ -45,6 +45,29 @@ async function request<T>(
 
 // ─── Types (minimal — real types come from the DB) ────────────────────────────
 
+export interface ProfileAnswer {
+  id: string;
+  candidateId: string;
+  category: string;
+  question: string;
+  answer: string;
+  isCustom: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ApplicationAnswer {
+  id: string;
+  applicationId: string;
+  question: string;
+  answer: string | null;
+  isGenerated: boolean;
+  isApproved: boolean;
+  factChecked: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface Candidate {
   id: string;
   name: string;
@@ -62,6 +85,7 @@ export interface Candidate {
   skills?: Skill[];
   educations?: Education[];
   achievements?: Achievement[];
+  profileAnswers?: ProfileAnswer[];
 }
 
 export interface Experience {
@@ -210,14 +234,6 @@ export interface Application {
   answers?: ApplicationAnswer[];
 }
 
-export interface ApplicationAnswer {
-  id: string;
-  question: string;
-  answer?: string | null;
-  isGenerated: boolean;
-  isApproved: boolean;
-}
-
 export interface ParsedResumeResult {
   parsed: {
     candidate: Partial<Candidate>;
@@ -349,6 +365,28 @@ export const api = {
       request<{ success: boolean }>(`/api/career/achievements/${id}`, {
         method: "DELETE",
       }),
+
+    // Common Profile Q&A Bank
+    getQuestions: () => request<ProfileAnswer[]>("/api/career/questions"),
+    generateQuestionAnswer: (question: string, category?: string) =>
+      request<{ answer: string }>("/api/career/questions/generate", {
+        method: "POST",
+        body: JSON.stringify({ question, category }),
+      }),
+    createQuestion: (data: Partial<ProfileAnswer>) =>
+      request<ProfileAnswer>("/api/career/questions", {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
+    updateQuestion: (id: string, data: Partial<ProfileAnswer>) =>
+      request<ProfileAnswer>(`/api/career/questions/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify(data),
+      }),
+    deleteQuestion: (id: string) =>
+      request<{ success: boolean }>(`/api/career/questions/${id}`, {
+        method: "DELETE",
+      }),
   },
 
   // Jobs
@@ -389,6 +427,26 @@ export const api = {
         `/api/jobs/${id}/recruiter-message`,
         { method: "POST", body: JSON.stringify({ platform }) }
       ),
+    getAnswers: (id: string) =>
+      request<ApplicationAnswer[]>(`/api/jobs/${id}/answers`),
+    answerQuestion: (id: string, question: string, instructions?: string) =>
+      request<{ answer: ApplicationAnswer; insufficient: boolean }>(
+        `/api/jobs/${id}/answer`,
+        { method: "POST", body: JSON.stringify({ question, instructions }) }
+      ),
+    deleteAnswer: (id: string, answerId: string) =>
+      request<{ success: boolean }>(`/api/jobs/${id}/answers/${answerId}`, {
+        method: "DELETE",
+      }),
+    chat: (
+      id: string,
+      message: string,
+      history?: Array<{ role: "user" | "assistant"; content: string }>
+    ) =>
+      request<{ reply: string }>(`/api/jobs/${id}/chat`, {
+        method: "POST",
+        body: JSON.stringify({ message, history }),
+      }),
   },
 
   // Applications

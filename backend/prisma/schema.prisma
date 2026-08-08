@@ -98,11 +98,28 @@ model Candidate {
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 
-  experiences  Experience[]
-  projects     Project[]
-  skills       Skill[]
-  educations   Education[]
-  achievements Achievement[]
+  experiences    Experience[]
+  projects       Project[]
+  skills         Skill[]
+  educations     Education[]
+  achievements   Achievement[]
+  profileAnswers ProfileAnswer[]
+}
+
+// ─── Profile Common Q&A Bank ──────────────────────────────────────────────────
+
+model ProfileAnswer {
+  id          String    @id @default(cuid())
+  candidateId String
+  candidate   Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+
+  category    String    @default("General") // "General" | "Technical" | "Behavioral" | "Logistics"
+  question    String
+  answer      String    @db.Text
+  isCustom    Boolean   @default(false)
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 }
 
 // ─── Experience ───────────────────────────────────────────────────────────────

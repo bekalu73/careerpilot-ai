@@ -14,6 +14,7 @@ import {
 import {
   APPLICATION_ANSWER_SYSTEM,
   buildApplicationAnswerPrompt,
+  buildChatCopilotPrompt,
 } from "../prompts/application-answer.js";
 import {
   RESUME_GENERATOR_SYSTEM,
@@ -108,8 +109,8 @@ export async function generateRecruiterMessage(
           ),
         },
       ],
-      temperature: 0.4,
-      maxTokens: 2048,
+      temperature: 0.5,
+      maxTokens: 1024,
     });
 
     tokensUsed = result.tokensUsed;
@@ -141,7 +142,8 @@ export async function generateApplicationAnswer(
   candidateProfile: string,
   jobDetails: string,
   question: string,
-  jobId: string
+  jobId?: string,
+  instructions?: string
 ): Promise<string> {
   const startTime = Date.now();
   let outputStatus = "success";
@@ -157,11 +159,65 @@ export async function generateApplicationAnswer(
           content: buildApplicationAnswerPrompt(
             candidateProfile,
             jobDetails,
-            question
+            question,
+            instructions
           ),
         },
       ],
-      temperature: 0.3,
+      temperature: 0.4,
+      maxTokens: 2048,
+    });
+
+    tokensUsed = result.tokensUsed;
+    return result.content;
+  } catch (err) {
+    outputStatus = "error";
+    errorMessage = err instanceof Error ? err.message : "Unknown error";
+    throw err;
+  } finally {
+    if (jobId) {
+      const durationMs = Date.now() - startTime;
+      prisma.aIExecution
+        .create({
+          data: {
+            jobId,
+            operationType: AIOperationType.APPLICATION_ANSWER_GENERATE,
+            model: primaryProvider.model,
+            inputMetadata: { question },
+            outputStatus,
+            tokensUsed: tokensUsed ?? null,
+            durationMs,
+            errorMessage: errorMessage ?? null,
+          },
+        })
+        .catch(console.error);
+    }
+  }
+}
+
+export async function chatWithApplicationCopilot(
+  candidateProfile: string,
+  jobDetails: string,
+  history: Array<{ role: "user" | "assistant"; content: string }>,
+  message: string,
+  jobId: string
+): Promise<string> {
+  const startTime = Date.now();
+  let outputStatus = "success";
+  let tokensUsed: number | undefined;
+  let errorMessage: string | undefined;
+
+  try {
+    const { messages } = buildChatCopilotPrompt(
+      candidateProfile,
+      jobDetails,
+      history,
+      message
+    );
+
+    const result = await primaryProvider.complete({
+      messages,
+      temperature: 0.5,
       maxTokens: 2048,
     });
 
@@ -179,7 +235,7 @@ export async function generateApplicationAnswer(
           jobId,
           operationType: AIOperationType.APPLICATION_ANSWER_GENERATE,
           model: primaryProvider.model,
-          inputMetadata: { question },
+          inputMetadata: { message, historyLength: history.length },
           outputStatus,
           tokensUsed: tokensUsed ?? null,
           durationMs,
