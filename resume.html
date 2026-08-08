@@ -1,0 +1,734 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Bekalu Sisay Iticha - Resume</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: "Times New Roman", serif;
+        line-height: 1.4;
+        color: #000;
+        background-color: #f9f9f9;
+      }
+
+      .resume-container {
+        max-width: 8.5in;
+        margin: 0 auto;
+        background: white;
+        padding: 0.75in;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      }
+
+      .download-btn {
+        text-align: center;
+        margin-bottom: 20px;
+      }
+
+      .download-btn button {
+        background: #000;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        font-family: "Times New Roman", serif;
+        font-size: 14px;
+        cursor: pointer;
+        border: 1px solid rgba(0, 0, 0, 0.4);
+      }
+
+      .download-btn button:hover {
+        background: #333;
+      }
+
+      h1 {
+        font-size: 20pt;
+        text-align: center;
+        margin-bottom: 5px;
+        font-weight: bold;
+        text-transform: uppercase;
+      }
+
+      .subtitle {
+        text-align: center;
+        font-size: 12pt;
+        margin-bottom: 15px;
+      }
+
+      .contact-info {
+        text-align: center;
+        font-size: 11pt;
+        margin-bottom: 20px;
+      }
+
+      .link-style {
+        color: black;
+        text-decoration: none;
+      }
+
+      h2 {
+        font-size: 14pt;
+        margin: 20px 0 12px 0;
+        padding-bottom: 5px;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.4);
+        font-weight: bold;
+        text-transform: capitalize;
+      }
+
+      h3 {
+        font-size: 12pt;
+        margin: 0;
+        font-weight: bold;
+      }
+
+      p {
+        margin: 6px 0;
+        font-size: 11pt;
+      }
+
+      ul {
+        list-style-type: disc;
+        margin: 8px 0 8px 20px;
+      }
+
+      li {
+        margin-bottom: 6px;
+        font-size: 11pt;
+      }
+
+      .job,
+      .project,
+      .education {
+        margin-bottom: 18px;
+        page-break-inside: avoid;
+      }
+
+      .job-header,
+      .education-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+      }
+
+      .job-title-container,
+      .education-title-container {
+        flex: 2;
+      }
+
+      .job-info-container,
+      .education-info-container {
+        flex: 1;
+        text-align: right;
+      }
+
+      .company,
+      .institution {
+        font-weight: bold;
+        margin-bottom: 3px;
+      }
+
+      .date,
+      .location {
+        font-style: italic;
+        color: #666;
+        font-weight: normal;
+        margin: 0;
+      }
+
+      .project-header {
+        margin-bottom: 8px;
+      }
+
+      .skills-container {
+        margin: 10px 0;
+      }
+
+      .skill-row {
+        margin-bottom: 12px;
+      }
+
+      .skill-label {
+        font-weight: bold;
+        display: inline-block;
+        width: 200px;
+        vertical-align: top;
+      }
+
+      .skill-items {
+        display: inline-block;
+        width: calc(100% - 210px);
+        vertical-align: top;
+      }
+
+      /* PDF-specific styles */
+      .pdf-no-break {
+        page-break-inside: avoid;
+      }
+
+      @media print {
+        body {
+          background: white;
+          padding: 0;
+        }
+
+        .resume-container {
+          box-shadow: none;
+          padding: 0.5in;
+          max-width: 100%;
+          width: 100%;
+        }
+
+        .download-btn {
+          display: none;
+        }
+
+        .job,
+        .project,
+        .education {
+          page-break-inside: avoid;
+        }
+
+        h2 {
+          page-break-after: avoid;
+        }
+      }
+
+      @media (max-width: 768px) {
+        .resume-container {
+          padding: 0.5in;
+        }
+
+        .job-header,
+        .education-header {
+          flex-direction: column;
+        }
+
+        .job-info-container,
+        .education-info-container {
+          text-align: left;
+          margin-top: 5px;
+        }
+
+        .skill-label {
+          width: 100%;
+          margin-bottom: 3px;
+        }
+
+        .skill-items {
+          width: 100%;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="download-btn">
+      <button id="downloadPdf">Download as PDF</button>
+    </div>
+
+    <div class="resume-container">
+      <h1>Bekalu Sisay Iticha</h1>
+      <p class="subtitle">Frontend Developer | MERN Fullstack Specialist</p>
+      <p class="contact-info">
+        bekalusisay2010@gmail.com | +251 946931271 |
+        <a href="https://linkedin.com/in/bekalusisay" class="link-style"
+          >linkedin.com/in/bekalusisay</a
+        >
+        <br />Addis Ababa, Ethiopia
+      </p>
+
+      <div class="pdf-section">
+        <h2>Professional Summary</h2>
+        <p>
+          MERN Fullstack Developer with expertise in building scalable,
+          responsive web applications using MongoDB, Express, React, and
+          Node.js. Skilled in PostgreSQL, MySQL, and Next.js, with a focus on
+          delivering seamless user experiences and robust backend solutions.
+          Passionate about collaborating with tech startups to drive innovation.
+        </p>
+      </div>
+
+      <div class="pdf-section">
+        <h2>Work Experience</h2>
+
+        <div class="job pdf-no-break">
+          <div class="job-header">
+            <div class="job-title-container">
+              <h3>Mobile App Developer</h3>
+              <p class="date">Feb 2026 – Present</p>
+            </div>
+            <div class="job-info-container">
+              <p class="company">EagleLion System Technology</p>
+              <p class="location">Addis Ababa, Ethiopia</p>
+            </div>
+          </div>
+          <ul>
+            <li>
+              Developing secure and scalable mobile banking features using React
+              Native.
+            </li>
+            <li>
+              Collaborated with cross-functional teams to implement scalable
+              UI/UX designs, improving user engagement by 20%.
+            </li>
+            <li>
+              Optimized frontend performance, reducing load times by 15% through
+              efficient state management and code refactoring.
+            </li>
+          </ul>
+        </div>
+
+        <div class="job pdf-no-break">
+          <div class="job-header">
+            <div class="job-title-container">
+              <h3>Frontend Developer</h3>
+              <p class="date">March 2025 – Feb 2026</p>
+            </div>
+            <div class="job-info-container">
+              <p class="company">EagleLion System Technology</p>
+              <p class="location">Addis Ababa, Ethiopia</p>
+            </div>
+          </div>
+          <ul>
+            <li>
+              Developed dynamic and responsive frontend interfaces using Next.js
+              and React for enterprise-level web applications.
+            </li>
+            <li>
+              Collaborated with cross-functional teams to implement scalable
+              UI/UX designs, improving user engagement by 20%.
+            </li>
+            <li>
+              Optimized frontend performance, reducing load times by 15% through
+              efficient state management and code refactoring.
+            </li>
+          </ul>
+        </div>
+
+        <div class="job pdf-no-break">
+          <div class="job-header">
+            <div class="job-title-container">
+              <h3>Full-stack Developer</h3>
+              <p class="date">October 2024 – March 2025</p>
+            </div>
+            <div class="job-info-container">
+              <p class="company">Ashewa Technology Solution</p>
+              <p class="location">Addis Ababa, Ethiopia</p>
+            </div>
+          </div>
+          <ul>
+            <li>
+              Built and maintained full-stack web applications using the MERN
+              stack, ensuring high availability and security.
+            </li>
+            <li>
+              Designed and implemented RESTful APIs with Node.js and Express,
+              integrating MongoDB and PostgreSQL for efficient data management.
+            </li>
+            <li>
+              Streamlined deployment processes using CI/CD pipelines, reducing
+              deployment time by 25%.
+            </li>
+          </ul>
+        </div>
+        <div class="job pdf-no-break">
+          <div class="job-header">
+            <div class="job-title-container">
+              <h3>Mobile App Developer</h3>
+              <p class="date">July 2023 – October 2024</p>
+            </div>
+            <div class="job-info-container">
+              <p class="company">Olla App</p>
+              <p class="location">Addis Ababa, Ethiopia</p>
+            </div>
+          </div>
+          <ul>
+            <li>
+              Developing secure and scalable mobile App using React Native.
+            </li>
+            <li>
+              Designed and managed databases using MongoDB and PostgreSQL,
+              optimizing queries and improving data consistency.
+            </li>
+            <!-- <li>
+              Implemented authentication, authorization, and role-based access
+              control to enhance application security.
+            </li>
+            <li>
+              Collaborated with frontend and mobile teams to integrate APIs and
+              deliver end-to-end features efficiently.
+            </li> -->
+          </ul>
+        </div>
+      </div>
+
+      <div class="pdf-section">
+        <h2>Projects</h2>
+
+        <!-- Dashen Boch Boch -->
+        <div class="project pdf-no-break">
+          <div class="project-header">
+            <h3>Dashen SuperAPP – Boch Boch Portal</h3>
+          </div>
+          <p>
+            Enterprise dashboard for Dashen Bank’s Boch Boch game within the
+            SuperApp ecosystem.
+          </p>
+          <ul>
+            <li>Built using Next.js, TypeScript, and Turborepo.</li>
+            <li>
+              Developed dashboards for prizes, player activity statistics, and
+              game insights.
+            </li>
+            <li>
+              Collaborated with banking stakeholders to ensure performance,
+              security, and scalability.
+            </li>
+          </ul>
+        </div>
+        <!-- Dashen Landing Page -->
+        <div class="project pdf-no-break">
+          <div class="project-header">
+            <h3>Dashen Bank Landing Page</h3>
+          </div>
+          <p>
+            Marketing and product landing pages for Dashen Bank digital
+            services.
+          </p>
+          <ul>
+            <li>
+              Developed responsive landing pages using Next.js and Tailwind CSS.
+            </li>
+            <li>
+              Implemented smooth, high-performance animations using GSAP to
+              enhance user engagement.
+            </li>
+            <li>
+              Integrated Sanity CMS for dynamic content management and easy
+              updates by non-technical teams.
+            </li>
+            <li>
+              Optimized performance, accessibility, and cross-device
+              compatibility.
+            </li>
+          </ul>
+        </div>
+        <div class="project pdf-no-break">
+          <div class="project-header">
+            <h3>Choice Microfinance</h3>
+          </div>
+          <p>
+            A mobile financial services application built for Choice
+            Microfinance to provide customers with seamless access to digital
+            banking services, including account management, transactions, and
+            real-time financial updates.
+          </p>
+          <ul>
+            <li>
+              Developed a cross-platform mobile app using React Native and
+              TypeScript.
+            </li>
+            <li>
+              Implemented efficient server-state management with TanStack Query.
+            </li>
+            <li>Used Zustand for lightweight global state management.</li>
+            <li>
+              Designed secure authentication and smooth navigation for mobile
+              users.
+            </li>
+          </ul>
+        </div>
+        <div class="project pdf-no-break">
+          <div class="project-header">
+            <h3>Ethiopost Agency Banking</h3>
+          </div>
+          <p>
+            A mobile application designed for EthioPost agents to deliver
+            banking services in remote and rural areas, enabling secure
+            financial transactions and customer onboarding directly from mobile
+            devices.
+          </p>
+          <ul>
+            <li>
+              Built a cross-platform agent banking app using React Native and
+              TypeScript.
+            </li>
+            <li>
+              Implemented financial operations such as cash-in, cash-out,
+              balance inquiry, and OTP verification.
+            </li>
+            <li>
+              Designed an interface optimized for field agents working in
+              low-connectivity environments.
+            </li>
+            <li>
+              Integrated secure authentication, PIN management, and API
+              communication for financial transactions.
+            </li>
+          </ul>
+        </div>
+        <div class="project pdf-no-break">
+          <div class="project-header">
+            <h3>Eaglelion Landing Page</h3>
+          </div>
+          <p>
+            A modern corporate landing page built to showcase Eaglelion Systems
+            Technology’s services and technical capabilities through elegant
+            design and smooth interactive animations.
+          </p>
+          <ul>
+            <li>
+              Built a responsive marketing website using Next.js and Tailwind
+              CSS.
+            </li>
+            <li>Implemented advanced scroll-based animations using GSAP.</li>
+            <li>
+              Developed reusable UI components with a scalable architecture.
+            </li>
+            <li>
+              Optimized performance and responsiveness across mobile, tablet,
+              and desktop devices.
+            </li>
+          </ul>
+        </div>
+
+        <!-- Connect Ethiopia -->
+        <div class="project pdf-no-break">
+          <div class="project-header">
+            <h3>Connect Ethiopia – CBE Remittance System</h3>
+          </div>
+          <p>
+            International remittance platform developed for Commercial Bank of
+            Ethiopia (CBE).
+          </p>
+          <ul>
+            <li>
+              Contributed to a secure remittance system enabling
+              diaspora-to-Ethiopia money transfers.
+            </li>
+            <li>
+              Built and optimized frontend modules using React.js and modern UI
+              practices.
+            </li>
+            <li>
+              Integrated APIs for transaction tracking, beneficiary management,
+              and status monitoring.
+            </li>
+          </ul>
+        </div>
+
+        <!-- Abronet -->
+        <div class="project pdf-no-break">
+          <div class="project-header">
+            <h3>Abronet Equb</h3>
+          </div>
+          <p>
+            Pyramid-style savings group platform for rapid capital collection
+            and distribution.
+          </p>
+          <ul>
+            <li>
+              Developed a scalable web application using MongoDB, React.js, and
+              Node.js.
+            </li>
+            <li>
+              Implemented tier-based contribution system to increase
+              participation.
+            </li>
+          </ul>
+        </div>
+
+        <!-- Delalaye -->
+        <div class="project pdf-no-break">
+          <div class="project-header">
+            <h3>Delalaye App</h3>
+          </div>
+          <p>
+            Digital platform connecting service providers with customers for
+            local services.
+          </p>
+          <ul>
+            <li>
+              Maintained and enhanced the app using MongoDB, Node.js, and
+              React.js.
+            </li>
+            <li>Improved UI/UX for better accessibility and engagement.</li>
+          </ul>
+        </div>
+
+        <!-- Directory -->
+        <div class="project pdf-no-break">
+          <div class="project-header">
+            <h3>Directory Listing</h3>
+          </div>
+          <p>
+            Categorized information platform enabling efficient search and
+            connections.
+          </p>
+          <ul>
+            <li>
+              Built a responsive application with Node.js, MongoDB, and
+              React.js.
+            </li>
+            <li>
+              Optimized search functionality, reducing query response time by
+              30%.
+            </li>
+          </ul>
+        </div>
+
+        <!-- Hageregna -->
+        <div class="project pdf-no-break">
+          <div class="project-header">
+            <h3>Hageregna Equb</h3>
+          </div>
+          <p>Community-based rotating savings group platform.</p>
+          <ul>
+            <li>Developed using Prisma, PostgreSQL, React.js, and Node.js.</li>
+            <li>
+              Integrated cycle-based payout system to improve trust and
+              usability.
+            </li>
+          </ul>
+        </div>
+
+        <!-- Kality Habitat -->
+        <div class="project pdf-no-break">
+          <div class="project-header">
+            <h3>Kality Habitat Edir</h3>
+          </div>
+          <p>
+            Mutual support association platform for financial and emotional aid.
+          </p>
+          <ul>
+            <li>Built a user-friendly interface using Next.js.</li>
+            <li>
+              Streamlined contribution tracking to enhance community engagement.
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="pdf-section">
+        <h2>Education</h2>
+        <div class="education pdf-no-break">
+          <div class="education-header">
+            <div class="education-title-container">
+              <h3>MERN Fullstack Website Development</h3>
+              <p class="date">February 2023 – July 2023</p>
+            </div>
+            <div class="education-info-container">
+              <p class="institution">Evangadi Tech</p>
+              <p class="location">Addis Ababa, Ethiopia</p>
+            </div>
+          </div>
+          <ul>
+            <li>
+              Completed intensive training in MongoDB, Express, React, and
+              Node.js.
+            </li>
+          </ul>
+        </div>
+
+        <div class="education pdf-no-break">
+          <div class="education-header">
+            <div class="education-title-container">
+              <h3>Bachelor of Science, Electrical and Computer Engineering</h3>
+              <p class="date">September 2011 – July 2023</p>
+            </div>
+            <div class="education-info-container">
+              <p class="institution">
+                Addis Ababa Science and Technology University
+              </p>
+              <p class="location">Addis Ababa, Ethiopia</p>
+            </div>
+          </div>
+          <ul>
+            <li>Awarded Very Good Achiever for academic excellence.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="pdf-section">
+        <h2>Technical Skills</h2>
+        <div class="skills-container">
+          <div class="skill-row">
+            <span class="skill-label">Languages/Frameworks:</span>
+            <span class="skill-items"
+              >JavaScript, TypeScript, React, Next.js, Node.js, Express</span
+            >
+          </div>
+          <div class="skill-row">
+            <span class="skill-label">Databases:</span>
+            <span class="skill-items">MongoDB, PostgreSQL, MySQL</span>
+          </div>
+          <div class="skill-row">
+            <span class="skill-label">Tools:</span>
+            <span class="skill-items">Git, Docker, CI/CD, Webpack, Prisma</span>
+          </div>
+          <div class="skill-row">
+            <span class="skill-label">Other:</span>
+            <span class="skill-items"
+              >RESTful APIs, Agile Methodologies, Responsive Design</span
+            >
+          </div>
+        </div>
+      </div>
+
+      <div class="pdf-section">
+        <h2>Certifications & Recognition</h2>
+        <ul>
+          <li>
+            Recognition Certificate – Dashen SuperApp Project, for outstanding
+            contribution to the Boch Boch Portal.
+          </li>
+          <li>
+            Quarterly Highest Achiever Award – Ashewa Technology Solution,
+            awarded for exceptional performance and impact.
+          </li>
+          <!-- <li>Advanced Node.js: Level Up Your Node.js Skills, 2024</li>
+          <li>Full Stack Website Development – Evangadi Tech, 2023</li> -->
+        </ul>
+      </div>
+    </div>
+
+    <script>
+      document
+        .getElementById("downloadPdf")
+        .addEventListener("click", function () {
+          const element = document.querySelector(".resume-container");
+
+          // Improved PDF options to prevent content cutting
+          const opt = {
+            margin: [0.5, 0.5, 0.5, 0.5],
+            filename: "Bekalu_Sisay_Iticha_Resume.pdf",
+            image: { type: "jpeg", quality: 0.98 },
+            html2canvas: {
+              scale: 2,
+              useCORS: true,
+              logging: false,
+              letterRendering: true,
+            },
+            jsPDF: {
+              unit: "in",
+              format: "letter",
+              orientation: "portrait",
+              compress: true,
+            },
+            pagebreak: {
+              mode: ["css", "legacy"],
+              avoid: ".pdf-no-break",
+            },
+          };
+
+          html2pdf().set(opt).from(element).save();
+        });
+    </script>
+  </body>
+</html>
