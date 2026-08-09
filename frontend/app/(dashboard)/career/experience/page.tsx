@@ -97,10 +97,9 @@ function ExperienceCard({ exp, onEdit, onDelete }: {
             {exp.responsibilities.length} responsibilities
           </button>
           {expanded && (
-            <ul className="mt-2 space-y-1.5 pl-3">
+            <ul className="mt-2 space-y-1 pl-4 list-disc list-outside marker:text-primary">
               {exp.responsibilities.map((r, i) => (
-                <li key={i} className="text-xs text-muted-foreground flex items-start gap-2">
-                  <span className="text-primary mt-0.5 shrink-0">·</span>
+                <li key={i} className="text-xs text-muted-foreground pl-1">
                   {r}
                 </li>
               ))}
