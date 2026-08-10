@@ -1,6 +1,3 @@
-// AI Client — OpenAI-compatible client pointing at Gemini
-// Uses Gemini's OpenAI-compatible endpoint for broad compatibility
-
 import OpenAI from "openai";
 
 if (!process.env["GEMINI_API_KEY"]) {
@@ -18,5 +15,25 @@ export const aiClient = new OpenAI({
   apiKey: process.env["GEMINI_API_KEY"],
   baseURL: "https://generativelanguage.googleapis.com/v1beta/openai/",
 });
+
+/**
+ * Fallback OpenRouter client to use when Gemini is rate limited.
+ */
+export const fallbackClient = process.env["OPEN_ROUTER_API_KEY"] 
+  ? new OpenAI({ 
+      apiKey: process.env["OPEN_ROUTER_API_KEY"],
+      baseURL: "https://openrouter.ai/api/v1",
+    })
+  : null;
+
+/**
+ * Second fallback Groq client to use.
+ */
+export const groqClient = process.env["GROQ_API_KEY"]
+  ? new OpenAI({
+      apiKey: process.env["GROQ_API_KEY"],
+      baseURL: "https://api.groq.com/openai/v1",
+    })
+  : null;
 
 export default aiClient;

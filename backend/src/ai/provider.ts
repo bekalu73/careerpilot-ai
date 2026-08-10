@@ -5,7 +5,7 @@ import type {
   AICompletionResult,
   AIProvider,
 } from "./types.js";
-import { aiClient } from "./client.js";
+import { aiClient, fallbackClient, groqClient } from "./client.js";
 
 // Primary and reasoning models backed by active Gemini 3 and flash preview models
 const PRIMARY_MODELS = [
@@ -14,6 +14,8 @@ const PRIMARY_MODELS = [
   "gemini-3.6-flash",
   "gemini-flash-latest",
   "gemini-2.0-flash",
+  "openai/gpt-oss-20b:free", // Fallback to OpenRouter free
+  "groq:llama-3.3-70b-versatile", // Fallback to Groq
 ];
 
 const REASONING_MODELS = [
@@ -21,6 +23,8 @@ const REASONING_MODELS = [
   "gemini-3.5-flash",
   "gemini-3.6-flash",
   "gemini-flash-latest",
+  "openai/gpt-oss-20b:free", // Fallback to OpenRouter free
+  "groq:llama-3.3-70b-versatile", // Fallback to Groq
 ];
 
 async function sleep(ms: number) {
@@ -42,9 +46,21 @@ function createProvider(preferredModel: string, fallbackModels: string[] = []): 
       for (const modelToTry of models) {
         for (let attempt = 0; attempt < 3; attempt++) {
           const startTime = Date.now();
+          let activeModel = modelToTry;
           try {
-            const response = await aiClient.chat.completions.create({
-              model: modelToTry,
+            let client = aiClient;
+
+            if (modelToTry.startsWith("groq:")) {
+              if (!groqClient) break; // Skip Groq if not configured
+              client = groqClient;
+              activeModel = modelToTry.replace("groq:", "");
+            } else if (modelToTry.includes("/")) {
+              if (!fallbackClient) break; // Skip OpenRouter if not configured
+              client = fallbackClient;
+            }
+
+            const response = await client.chat.completions.create({
+              model: activeModel,
               messages: options.messages,
               temperature: options.temperature ?? 0.3,
               max_tokens: options.maxTokens ?? 4096,
@@ -60,7 +76,7 @@ function createProvider(preferredModel: string, fallbackModels: string[] = []): 
             return {
               content,
               tokensUsed,
-              model: modelToTry,
+              model: activeModel,
               durationMs,
             };
           } catch (err: any) {
@@ -68,7 +84,7 @@ function createProvider(preferredModel: string, fallbackModels: string[] = []): 
             const isRateLimit = err?.status === 429 || err?.message?.includes("429") || err?.message?.includes("RESOURCE_EXHAUSTED");
             if (isRateLimit && attempt < 2) {
               const waitTime = (attempt + 1) * 2000 + Math.random() * 1000;
-              console.warn(`[AIProvider] Rate limited on ${modelToTry}, retrying in ${Math.round(waitTime)}ms (attempt ${attempt + 1}/3)...`);
+              console.warn(`[AIProvider] Rate limited on ${activeModel}, retrying in ${Math.round(waitTime)}ms (attempt ${attempt + 1}/3)...`);
               await sleep(waitTime);
               continue;
             }
