@@ -86,8 +86,8 @@ export default function JobAnalysisPage({
       icon: Globe,
       label: "Domains",
       items: job.domains,
-      color: "text-accent",
-      bg: "bg-accent/10 border-accent/20",
+      color: "text-purple-400",
+      bg: "bg-purple-500/10 border-purple-500/20",
     },
     {
       icon: Key,

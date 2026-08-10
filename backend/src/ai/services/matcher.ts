@@ -55,9 +55,9 @@ export async function matchCandidateToJob(
     let parsed: unknown;
     try {
       parsed = parseAIJson(result.content);
-    } catch {
+    } catch (parseErr: any) {
       outputStatus = "validation_failed";
-      throw new Error("AI returned invalid JSON for candidate matching");
+      throw new Error(`AI returned invalid JSON for candidate matching: ${parseErr.message}`);
     }
 
     const validated = CandidateMatcherResultSchema.safeParse(parsed);
@@ -125,9 +125,9 @@ export async function selectRelevantProjects(
     let parsed: unknown;
     try {
       parsed = parseAIJson(result.content);
-    } catch {
+    } catch (parseErr: any) {
       outputStatus = "validation_failed";
-      throw new Error("AI returned invalid JSON for project selection");
+      throw new Error(`AI returned invalid JSON for project selection: ${parseErr.message}`);
     }
 
     const validated = ProjectSelectorResultSchema.safeParse(parsed);
