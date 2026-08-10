@@ -2,8 +2,10 @@
 
 import { use } from "react";
 import { useQuery } from "@tanstack/react-query";
+import Link from "next/link";
 import {
   Brain,
+  ArrowLeft,
   CheckCircle,
   AlertCircle,
   Wrench,
@@ -99,6 +101,13 @@ export default function JobAnalysisPage({
   return (
     <div className="p-6 max-w-4xl mx-auto space-y-6">
       <div>
+        <Link
+          href={`/jobs/${id}`}
+          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-3 transition-colors"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to Workspace
+        </Link>
         <h1 className="text-2xl font-bold text-foreground tracking-tight">
           Job Analysis
         </h1>

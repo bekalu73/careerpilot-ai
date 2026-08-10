@@ -8,6 +8,7 @@ import {
   Zap,
   FileText,
   ArrowRight,
+  ArrowLeft,
   Building2,
   MapPin,
   Clock,
@@ -132,6 +133,13 @@ export default function JobWorkspacePage({
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div>
+          <Link
+            href="/jobs"
+            className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-3 transition-colors"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to Jobs
+          </Link>
           <h1 className="text-2xl font-bold text-foreground tracking-tight">
             {job.title}
           </h1>
