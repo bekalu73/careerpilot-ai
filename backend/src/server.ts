@@ -17,11 +17,13 @@ const PORT = parseInt(process.env["PORT"] ?? "5001", 10);
 
 app.use(
   cors({
-    origin: [
-      "http://localhost:3000",
-      "http://localhost:3001",
-      process.env["FRONTEND_URL"] ?? "",
-    ].filter(Boolean),
+    origin: function (origin, callback) {
+      if (!origin || origin.startsWith("http://localhost") || origin.startsWith("chrome-extension://") || origin === process.env["FRONTEND_URL"]) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
     credentials: true,
   })
 );

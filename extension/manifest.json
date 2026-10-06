@@ -1,0 +1,23 @@
+{
+  "manifest_version": 3,
+  "name": "CareerPilot Job Importer",
+  "version": "1.0.0",
+  "description": "1-Click job importing to CareerPilot AI",
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "storage"
+  ],
+  "host_permissions": [
+    "*://*/*"
+  ],
+  "action": {
+    "default_popup": "index.html"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["src/content/index.ts"]
+    }
+  ]
+}
